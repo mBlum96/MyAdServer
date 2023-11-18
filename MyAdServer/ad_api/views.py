@@ -3,7 +3,10 @@ from django.http import JsonResponse
 from .models import Ad
 from .constants import MAX_ADS_SHOWN
 import random
+import logging
 # Create your views here.
+
+logger = logging.getLogger(__name__)
 
 def weighted_random_selection(ads, max_ads):
     selected = []
@@ -38,6 +41,8 @@ def get_ads(request):
     user_id = request.GET.get('user_id')
     gender = request.GET.get('gender')
     country = request.GET.get('country')
+    logger.debug(f"Request for ads received: User ID - {user_id},
+                  Gender - {gender}, Country - {country}")
     attributes ={
         'target_gender': gender,
         'target_country': country,
@@ -60,8 +65,10 @@ def get_ads(request):
         ad_data = [{'image url': ad.image_url,'landing_url': ad.landing_url,
                     'reward': ad.reward}
                     for ad in selected_ads ]
+        logger.debug(f"Ads selected: {ad_data}")
         return JsonResponse({'ads': ad_data})
 
+    logger.debug(f"No ads available for the given criteria: {attributes}")
     return JsonResponse({
         'message': 'No ads available for the given criteria'}, status=404)
 
