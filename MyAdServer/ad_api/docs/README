@@ -1,0 +1,57 @@
+# Adding New Ad Broadcasting Policies
+
+## Overview
+
+This section guides you through the process of adding new ad broadcasting policies to the AdSelectionView.
+
+## Steps to Add a New Policy
+
+### Step 1: Define the New Policy
+
+Add a new policy constant in `constants.py`.
+Example:
+
+```python
+GROUP_NEW_POLICY = 4  # Adjust the number based on existing policies
+```
+
+### Step 2: Update select_ads method
+
+Example:
+
+```python
+def select_ads(self, ads):
+    # existing policies...
+    if self.user_group == GROUP_NEW_POLICY:
+        return self.select_using_new_policy(ads, MAX_ADS_SHOWN)
+    # other conditions...
+
+```
+
+### Step 3: Implement policy logic
+
+Create a new method select_using_new_policy that contains the logic for the new policy.
+Example:
+
+```python
+def select_using_new_policy(self, ads, max_ads):
+    # Implement your custom logic here
+    pass
+```
+
+### Performance Optimization Strategies
+
+## Caching
+
+Caching can significantly improve the performance of your view by reducing the number of times you need to execute the same queries or computations, especially for data that doesn't change very often.
+Since our data is pretty stable in this exercise, this is great.
+
+## Database Indexing (PostgreSQL)
+
+Indexing is like adding a quick reference guide to your database. It helps the database find data faster without scanning the entire table.
+
+## Query Optimization (Django)
+
+Ensuring that your database queries are efficient and don’t fetch more data than needed.
+A way to mitigate this problem be Use Django's select_related and prefetch_related for related objects to reduce the number of database queries.
+Since we primarily dealt with 'Ad' objects without apparent foreign key relationships to other models. The primary optimization in your case revolves around filtering Ad objects based on specific criteria (like target_country and target_gender) and processing them for ad selection.

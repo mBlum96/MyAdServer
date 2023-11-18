@@ -16,9 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from ad_api.views import get_ads
+from ad_api.views import AdSelectionView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('get-ads/', get_ads, name='get_ads'),
+    path('get-ads/', AdSelectionView.as_view(), name='get_ads'),
 ]
+
