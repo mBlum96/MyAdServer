@@ -1,0 +1,1 @@
+MAX_ADS_SHOWN = 3
