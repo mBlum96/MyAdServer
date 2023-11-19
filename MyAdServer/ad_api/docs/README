@@ -82,3 +82,104 @@ all the steps of the assignment.
 
 Another way to prevent users from changing the reward is to set the reward field
 to private and have a method to set it that is only accecible to admins.
+
+The major way I protect against users abusing accumulation of rewards is
+by attaching to each reward a one time ssl token that can be used only once
+to accumulate a reward
+
+# AdSelectionView API
+
+## Endpoint
+
+URL: /get-ads/
+Method: GET
+
+## Description:
+
+Selects ads based on user attributes and broadcasting policies.
+
+## Functionality
+
+Handles the selection and delivery of ads.
+Generates a secure token for each ad for validating user interactions.
+
+## Adding New Broadcasting Policies
+
+Define new policy in constants.py.
+Implement selection logic in a method like select_using_new_policy.
+Update select_ads to include the new policy.
+
+# Reward Update API
+
+## Endpoint
+
+URL: /reward-update/
+Method: POST
+
+## Description:
+
+Allows admin users to update the reward value for an ad.
+
+## Security Measures
+
+### Admin-only access
+
+using @method_decorator(user_passes_test(lambda u: u.is_staff)).
+
+### CSRF Protection
+
+Django's built-in CSRF protection is enabled for this API.
+A CSRF token must be included in POST requests to prevent Cross-Site Request Forgery attacks.
+Admin-Only Access for Reward Updates
+The API uses the user_passes_test decorator to ensure that only admin users can update reward values.
+This is a crucial measure to prevent unauthorized manipulation of reward values.
+
+# Reward Accumulation API
+
+## Functionality
+
+The API is triggered when a user interacts with an ad (typically a click).
+It validates the interaction using a secure, one-time token and credits the user's account with the corresponding reward.
+
+## API Endpoint
+
+URL: /accumulate-reward/
+Method: POST
+Data Requirements:
+user_id: ID of the user who interacted with the ad.
+ad_id: ID of the ad that was interacted with.
+reward: The reward amount for interacting with the ad.
+token: A unique, one-time use token associated with the ad view.
+
+## Response
+
+Success: Returns a message confirming the reward accumulation.
+Failure: Returns an error message, typically when the token is invalid or already used.
+
+## Security Measures
+
+### One-Time SSL Token
+
+Each ad interaction is secured with a one-time SSL token generated in the AdSelection process.
+This token must be sent back with the reward accumulation request, ensuring that rewards can only be claimed through legitimate ad interactions.
+Once used, the token is marked as such in the database, preventing reuse.
+
+### Future Considerations
+
+REST API Implementation: For enhanced decoupling and security, a RESTful API structure can be considered. This would require additional development time but offers benefits in terms of standardization and scalability.
+Private Reward Field: To further tighten security, the reward field could be made private with a dedicated admin-accessible method for updates.
+
+### Handling Performance Issues
+
+Caching Strategies
+Caching is implemented to minimize database queries, especially for data that remains relatively stable.
+This reduces server response times and lightens database load, crucial for high-traffic scenarios.
+
+### Database Indexing
+
+Indexes in the PostgreSQL database are used to speed up data retrieval, especially for frequently queried fields like target_country and target_gender in the Ad model.
+
+### Query Optimization
+
+Django’s select_related and prefetch_related are used for efficient handling of related objects.
+This is particularly beneficial when dealing with a large number of Ad objects and their associated data.
