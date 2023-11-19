@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'ad_api',
+    'rewards',
 ]
 
 MIDDLEWARE = [
@@ -51,6 +52,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'MyAdServer.urls'
+LOGIN_URL = 'admin:login'
 
 TEMPLATES = [
     {

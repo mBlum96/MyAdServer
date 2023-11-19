@@ -5,9 +5,12 @@ from django.core.cache import cache
 from .models import Ad
 from .constants import MAX_ADS_SHOWN, NUMBER_OF_GROUPS,\
       GROUP_RANDOM, GROUP_MIX, GROUP_PCTR,GROUP_WEIGHT, ONE_HOUR
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
 import random
 import logging
 import requests
+
 # Create your views here.
 
 logger = logging.getLogger(__name__)
@@ -129,9 +132,9 @@ class AdSelectionView(View):
         if response.status_code == 200:
             pctr_values = response.json().get('pctr', [])
 
-            cache_timeout = ONE_HOUR
-            cache.set(cache_key, pctr_values, cache_timeout)
-            return dict(zip(self.matching_ad_ids, pctr_values))
+            pctr_dict = dict(zip(self.matching_ad_ids, pctr_values))
+            cache.set(cache_key, pctr_dict, ONE_HOUR)
+            return pctr_dict
         else:
             logger.error(f"CTR Prediction server error: {response.status_code}")
             return {}
@@ -162,3 +165,12 @@ class AdSelectionView(View):
     
     def random_selection(self, ads, max_ads):
         return random.sample(list(ads), max_ads)
+
+def get_csrf(request):
+    # Force CSRF token to be generated
+    token = get_token(request)
+    # Send CSRF token in the cookie and as a separate header for convenience
+    response = JsonResponse({'detail': 'CSRF cookie set'})
+    response.set_cookie('csrftoken', token)
+    response['X-CSRFToken'] = token
+    return response

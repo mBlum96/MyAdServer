@@ -55,3 +55,30 @@ Indexing is like adding a quick reference guide to your database. It helps the d
 Ensuring that your database queries are efficient and don’t fetch more data than needed.
 A way to mitigate this problem be Use Django's select_related and prefetch_related for related objects to reduce the number of database queries.
 Since we primarily dealt with 'Ad' objects without apparent foreign key relationships to other models. The primary optimization in your case revolves around filtering Ad objects based on specific criteria (like target_country and target_gender) and processing them for ad selection.
+
+STEP3:
+I found out that I couldn't just send a POST request with a json to
+update the reward value.
+This would result in this error:
+Forbidden (CSRF cookie not set.): /reward-update/
+"POST /reward-update/ HTTP/1.1" 403 2870
+
+The Forbidden (CSRF cookie not set.) error is related to Django's built-in protection against Cross-Site Request Forgery (CSRF) attacks. When you make a POST request to a Django view, Django expects a CSRF token to be included in the request for security reasons. This is enforced by default in Django's settings.
+
+So that is already one protection. But I do understand that it might not be
+sufficient.
+
+I also added this method decorator:
+
+```python
+   @method_decorator(user_passes_test(lambda u: u.is_staff))
+```
+
+To protect from users who do not posses admin priviledges.
+
+We could use REST API for further decoupling and security but I feared that
+it would add development time and wanted to make sure I have time to finish
+all the steps of the assignment.
+
+Another way to prevent users from changing the reward is to set the reward field
+to private and have a method to set it that is only accecible to admins.
