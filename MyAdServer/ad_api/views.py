@@ -7,9 +7,12 @@ from .constants import MAX_ADS_SHOWN, NUMBER_OF_GROUPS,\
       GROUP_RANDOM, GROUP_MIX, GROUP_PCTR,GROUP_WEIGHT, ONE_HOUR
 from django.middleware.csrf import get_token
 from django.http import JsonResponse
+from rewards.models import AdViewToken
+from django.contrib.auth.models import User
 import random
 import logging
 import requests
+import ssl
 
 # Create your views here.
 
@@ -50,6 +53,9 @@ class AdSelectionView(View):
             return self.format_ad_data(selected_ads)
         else:
             return None
+
+    def generate_secure_token(self):
+        return ssl.RAND_bytes(16).hex()  # Generates a 16-byte (128-bit) secure token
 
     #this function is used to filter ads based on user data
     #I made it future proof by allowing for any number of attributes
@@ -96,9 +102,27 @@ class AdSelectionView(View):
 
     
     def format_ad_data(self, ads):
-        return [{'image url': ad.image_url,\
-                  'landing_url': ad.landing_url,\
-                      'reward': ad.reward} for ad in ads]
+        formatted_ads = []
+        user_id = self.user_id
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            logger.error(f"User with ID {user_id} not found")
+            return formatted_ads  # Or handle differently based on your application logic
+
+        for ad in ads:
+            token = self.generate_secure_token()
+            AdViewToken.objects.create(user_id=user_id, ad=ad, token=token, used=False)
+            ad_data = {
+                'image url': ad.image_url,
+                'landing_url': ad.landing_url,
+                'reward': ad.reward,
+                'token': token
+            }
+            formatted_ads.append(ad_data)
+
+        return formatted_ads
+
 
     def select_using_weighted_random(self, ads, max_ads):
         selected = []

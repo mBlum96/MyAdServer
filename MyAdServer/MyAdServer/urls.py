@@ -19,11 +19,15 @@ from django.urls import path
 from ad_api.views import AdSelectionView
 from ad_api.views import get_csrf
 from rewards.views import RewardUpdateView
+from rewards.views import RewardAccumulationView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('get-ads/', AdSelectionView.as_view(), name='get_ads'),
     path('get-csrf-token/', get_csrf, name='get-csrf-token'),
     path('reward-update/', RewardUpdateView.as_view(), name='reward_update'),
+    path('reward-accumulation/', RewardAccumulationView.as_view(),name='reward_accumulation'),
+
+
 ]
 

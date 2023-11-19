@@ -1,7 +1,6 @@
 from django.db import models
-from django.db import models
-from django.contrib.auth.models import User
 from ad_api.models import Ad
+from django.contrib.auth.models import User
 
 class UserReward(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rewards')
@@ -12,3 +11,13 @@ class UserReward(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.amount}"
+
+class AdViewToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    ad = models.ForeignKey(Ad, on_delete=models.CASCADE)
+    token = models.CharField(max_length=100, unique=True)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.token

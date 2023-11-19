@@ -6,9 +6,11 @@ from .constants import GROUP_PCTR, GROUP_WEIGHT
 import random
 import requests
 from .views import AdSelectionView
+from django.contrib.auth.models import User
 
 class WeightBasedSelectionTest(TestCase):
     def setUp(self):
+        self.test_user = User.objects.create_user(username='testuser', password='testpass')
         # Create 5 ads targeted towards the same country and gender
         for i in range(1, 6):
             Ad.objects.create(
