@@ -20,6 +20,9 @@ from ad_api.views import AdSelectionView
 from ad_api.views import get_csrf
 from rewards.views import RewardUpdateView
 from rewards.views import RewardAccumulationView
+from rewards.views import RewardDeductionView
+from rewards.views import RewardBalanceView
+# from rewards.views import RewardHistoryView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,7 +30,8 @@ urlpatterns = [
     path('get-csrf-token/', get_csrf, name='get-csrf-token'),
     path('reward-update/', RewardUpdateView.as_view(), name='reward_update'),
     path('reward-accumulation/', RewardAccumulationView.as_view(),name='reward_accumulation'),
-
-
+    path('reward-deduction/', RewardDeductionView.as_view(), name='reward_deduction'),
+    path('reward-balance/', RewardBalanceView.as_view(), name='reward_balance'),
+    # path('reward-history/', RewardHistoryView.as_view(), name='reward_history'),
 ]
 

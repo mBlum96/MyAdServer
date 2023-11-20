@@ -5,7 +5,9 @@ from django.contrib.auth.models import User
 from unittest.mock import patch
 import json
 from unittest import skip
+import pdb
 
+# @skip("debug")
 class RewardUpdateViewTest(TestCase):
 
     def setUp(self):
@@ -57,6 +59,7 @@ class RewardUpdateViewTest(TestCase):
                                     content_type='application/json')
         self.assertEqual(response.status_code, 400)  # Bad Request
 
+# @skip("debug")
 class RewardAccumulationViewTest(TestCase):
 
     def setUp(self):
@@ -133,4 +136,70 @@ class RewardAccumulationViewTest(TestCase):
         #so this is a redundant test but it is 23:25 right now 
         #so I am leaving it in
         
+# @skip("debug")
+class RewardDeductionViewTest(TestCase):
 
+    def setUp(self):
+        # Create a test user
+        self.user = User.objects.create_user(username='testuser', password='12345')
+
+        # Add initial rewards to the user
+        UserReward.objects.create(user=self.user, amount=100.0, transaction_type='earned')
+
+        # Set up the client
+        self.client = Client()
+
+    def test_successful_reward_deduction(self):
+        data = {'user_id': self.user.id, 'amount': 30.0}
+        response = self.client.post(reverse('reward_deduction'), json.dumps(data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        # Check the new balance
+        new_balance = sum(reward.amount for reward in UserReward.objects.filter(user=self.user))
+        # pdb.set_trace()
+        self.assertEqual(new_balance, 70.0)
+
+    def test_deduction_exceeding_balance(self):
+        data = {'user_id': self.user.id, 'amount': 150.0}
+        response = self.client.post(reverse('reward_deduction'), json.dumps(data), content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_user(self):
+        data = {'user_id': 9999, 'amount': 50.0}  # Non-existent user
+        response = self.client.post(reverse('reward_deduction'), json.dumps(data), content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
+    def test_invalid_data_format(self):
+        data = {'user_id': self.user.id, 'amount': 'invalid'}  # Invalid amount format
+        response = self.client.post(reverse('reward_deduction'), json.dumps(data), content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        
+class RewardBalanceViewTest(TestCase):
+
+    def setUp(self):
+        # Create a test user
+        self.user = User.objects.create_user(username='testuser', password='12345')
+
+        # Add rewards to the user
+        UserReward.objects.create(user=self.user, amount=100.0, transaction_type='earned')
+        UserReward.objects.create(user=self.user, amount=-50.0, transaction_type='deducted')
+
+        # Set up the client
+        self.client = Client()
+
+    # @skip("debug")
+    def test_get_reward_balance(self):
+        response = self.client.get(reverse('reward_balance'), {'user_id': self.user.id})
+        self.assertEqual(response.status_code, 200)
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data['reward_balance'], 50.0)
+
+    # @skip("debug")
+    def test_user_not_found(self):
+        response = self.client.get(reverse('reward_balance'), {'user_id': 9999})
+        self.assertEqual(response.status_code, 404)
+
+    # @skip("debug")
+    def test_no_user_id_provided(self):
+        response = self.client.get(reverse('reward_balance'))
+        self.assertEqual(response.status_code, 400)

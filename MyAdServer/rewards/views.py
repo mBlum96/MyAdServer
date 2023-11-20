@@ -112,3 +112,75 @@ class RewardAccumulationView(View):
         except Exception as e:
             logger.error(f"Unexpected error in accumulate_reward: {e}")
             return JsonResponse({'message': 'Internal Server Error'}, status=500)
+
+class RewardDeductionView(View):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user_id = None
+        self.amount = None
+
+    def post(self, request, *args, **kwargs):
+        try:
+            self.initialize_request_attributes(request)
+
+            return self.deduct_reward()
+        except json.JSONDecodeError:
+            return JsonResponse({'message': 'Invalid JSON'}, status=400)
+        except KeyError:
+            return JsonResponse({'message': 'Missing required field'}, status=400)
+        except ValueError:
+            return JsonResponse({'message': 'Invalid value for amount'}, status=400)
+        except ObjectDoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'message': str(e)}, status=500)
+
+    def initialize_request_attributes(self, request):
+        data = json.loads(request.body)
+        self.user_id = data['user_id']
+        self.amount = float(data['amount'])
+    
+    def deduct_reward(self):
+        try:
+            user = User.objects.get(id=self.user_id)
+
+            # Calculate the user's total reward balance
+            total_reward_balance = sum(reward.amount for reward in UserReward.objects.filter())
+
+            if total_reward_balance >= self.amount:
+                # Deduct the amount from the user's reward balance
+                UserReward.objects.create(user=user, amount=-self.amount, transaction_type='deducted')
+                return JsonResponse({'message': 'Reward deducted successfully'})
+            else:
+                return JsonResponse({'message': 'Insufficient reward balance'}, status=400)
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=404)
+        
+
+class RewardBalanceView(View):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user_id = None
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            # pdb.set_trace()
+            self.initialize_request_attributes(request)
+            if not self.user_id:
+                return JsonResponse({'message': 'User ID is required'}, status=400)
+            return self.calculate_reward_balance()
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'message': str(e)}, status=500)
+    
+    def initialize_request_attributes(self, request):
+        self.user_id = request.GET.get('user_id')
+
+    def calculate_reward_balance(self):
+        user = User.objects.get(id=self.user_id)
+        total_reward = float(sum(reward.amount for reward in UserReward.objects.filter(user=user)))
+        return JsonResponse({'user_id': self.user_id, 'reward_balance': total_reward})
+    
