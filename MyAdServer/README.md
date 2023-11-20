@@ -1,3 +1,7 @@
+**TABLE OF CONTENTS:**
+
+**APIs:**
+
 - [AdSelectionView API](#adselectionview-api)
   - [Functionality](#functionality)
   - [API Endpoint](#api-endpoint)
@@ -45,7 +49,10 @@
     - [Data Requirements](#data-requirements-5)
   - [Response](#response-5)
   - [Error Handling](#error-handling-5)
-- [Adding New Ad Broadcasting Policies](#adding-new-ad-broadcasting-policies-1)
+
+**Instructions and considerations:**
+
+- [Adding New Broadcasting Policies](#adding-new-ad-broadcasting-policies)
   - [Overview](#overview)
   - [Steps to Add a New Policy](#steps-to-add-a-new-policy)
     - [Step 1: Define the New Policy](#step-1-define-the-new-policy)
