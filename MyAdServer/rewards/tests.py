@@ -3,9 +3,12 @@ from django.urls import reverse
 from .models import Ad, UserReward, AdViewToken
 from django.contrib.auth.models import User
 from unittest.mock import patch
-import json
 from unittest import skip
+from django.utils import timezone
+from datetime import timedelta
+import json
 import pdb
+
 
 # @skip("debug")
 class RewardUpdateViewTest(TestCase):
@@ -202,4 +205,34 @@ class RewardBalanceViewTest(TestCase):
     # @skip("debug")
     def test_no_user_id_provided(self):
         response = self.client.get(reverse('reward_balance'))
+        self.assertEqual(response.status_code, 400)
+
+class RewardHistoryViewTest(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='12345')
+        self.one_week_ago = timezone.now() - timedelta(weeks=1)
+        UserReward.objects.create(user=self.user, amount=10.0, transaction_type='earned', created_at=self.one_week_ago)
+        UserReward.objects.create(user=self.user, amount=-5.0, transaction_type='deducted', created_at=timezone.now())
+
+        self.client = Client()
+
+    # @skip("debug")
+    def test_reward_history_success(self):
+        response = self.client.get(reverse('reward_history'), {'user_id': self.user.id})
+        self.assertEqual(response.status_code, 200)
+        response_data = json.loads(response.content)
+        self.assertEqual(len(response_data['reward_history']), 2)
+        #check if the reward history values are correct
+        self.assertEqual(response_data['reward_history'][0]['amount'], 10.0)
+        self.assertEqual(response_data['reward_history'][1]['amount'], -5.0)
+    
+    # @skip("debug")
+    def test_user_not_found(self):
+        response = self.client.get(reverse('reward_history'), {'user_id': 9999})
+        self.assertEqual(response.status_code, 404)
+
+    # @skip("debug")
+    def test_no_user_id_provided(self):
+        response = self.client.get(reverse('reward_history'))
         self.assertEqual(response.status_code, 400)

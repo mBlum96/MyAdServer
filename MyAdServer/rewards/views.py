@@ -4,6 +4,8 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.http import JsonResponse
 from rewards.models import Ad, UserReward, AdViewToken
+from django.utils import timezone
+from datetime import timedelta
 import json
 import logging
 import pdb
@@ -95,10 +97,10 @@ class RewardAccumulationView(View):
     def accumulate_reward(self):
         try:
             # pdb.set_trace()
-            user = User.objects.get(id=self.user_id)
+            _user = User.objects.get(id=self.user_id)
             ad = Ad.objects.get(id=self.ad_id)
             amount = 0
-            user_reward, created = UserReward.objects.get_or_create(user=user, ad=ad, amount=amount, transaction_type='earned')
+            user_reward, created = UserReward.objects.get_or_create(user=_user, ad=ad, amount=amount, transaction_type='earned')
             if created:
                 user_reward.amount = ad.reward 
                 user_reward.transaction_type = 'earned'
@@ -143,14 +145,14 @@ class RewardDeductionView(View):
     
     def deduct_reward(self):
         try:
-            user = User.objects.get(id=self.user_id)
+            _user = User.objects.get(id=self.user_id)
 
             # Calculate the user's total reward balance
             total_reward_balance = sum(reward.amount for reward in UserReward.objects.filter())
 
             if total_reward_balance >= self.amount:
                 # Deduct the amount from the user's reward balance
-                UserReward.objects.create(user=user, amount=-self.amount, transaction_type='deducted')
+                UserReward.objects.create(user=_user, amount=-self.amount, transaction_type='deducted')
                 return JsonResponse({'message': 'Reward deducted successfully'})
             else:
                 return JsonResponse({'message': 'Insufficient reward balance'}, status=400)
@@ -180,7 +182,36 @@ class RewardBalanceView(View):
         self.user_id = request.GET.get('user_id')
 
     def calculate_reward_balance(self):
-        user = User.objects.get(id=self.user_id)
-        total_reward = float(sum(reward.amount for reward in UserReward.objects.filter(user=user)))
+        _user = User.objects.get(id=self.user_id)
+        total_reward = float(sum(reward.amount for reward in UserReward.objects.filter(user=_user)))
         return JsonResponse({'user_id': self.user_id, 'reward_balance': total_reward})
     
+class RewardHistoryView(View):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user_id = None
+        
+    def initialize_request_attributes(self, request):
+        self.user_id = request.GET.get('user_id')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # pdb.set_trace()
+            self.initialize_request_attributes(request)
+            if not self.user_id:
+                return JsonResponse({'message': 'User ID is required'}, status=400)
+
+            return self.get_reward_history()
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'message': str(e)}, status=500)
+    
+    def get_reward_history(self):
+        _user = User.objects.get(id=self.user_id)
+        one_week_ago = timezone.now() - timedelta(weeks=1)
+        rewards = UserReward.objects.filter(user=_user, created_at__gte=one_week_ago)
+
+        history = [{'amount': float(reward.amount), 'transaction_type': reward.transaction_type, 'date': reward.created_at} for reward in rewards]
+        return JsonResponse({'user_id': self.user_id, 'reward_history': history})

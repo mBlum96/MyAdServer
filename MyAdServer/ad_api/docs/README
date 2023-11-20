@@ -15,7 +15,18 @@ Example:
 GROUP_NEW_POLICY = 4  # Adjust the number based on existing policies
 ```
 
-### Step 2: Update select_ads method
+### Step 2: Implement policy logic
+
+Create a new method select_using_new_policy that contains the logic for the new policy.
+Example:
+
+```python
+def select_using_new_policy(self, ads, max_ads):
+    # Implement your custom logic here
+    pass
+```
+
+### Step 3: Update select_ads method
 
 Example:
 
@@ -28,71 +39,69 @@ def select_ads(self, ads):
 
 ```
 
-### Step 3: Implement policy logic
+## Handling Performance Issues
 
-Create a new method select_using_new_policy that contains the logic for the new policy.
-Example:
+### Caching Strategies
 
-```python
-def select_using_new_policy(self, ads, max_ads):
-    # Implement your custom logic here
-    pass
-```
+Caching is implemented to minimize database queries, especially for data that remains relatively stable.
+This reduces server response times and lightens database load, crucial for high-traffic scenarios.
 
-### Performance Optimization Strategies
+### Database Indexing
 
-## Caching
+Indexes in the PostgreSQL database are used to speed up data retrieval, especially for frequently queried fields like target_country and target_gender in the Ad model.
 
-Caching can significantly improve the performance of your view by reducing the number of times you need to execute the same queries or computations, especially for data that doesn't change very often.
-Since our data is pretty stable in this exercise, this is great.
+### Query Optimization
 
-## Database Indexing (PostgreSQL)
+Django’s select_related and prefetch_related are used for efficient handling of related objects.
+This is particularly beneficial when dealing with a large number of Ad objects and their associated data.
 
-Indexing is like adding a quick reference guide to your database. It helps the database find data faster without scanning the entire table.
+## Security Measures
 
-## Query Optimization (Django)
+### For accumulating rewards:
 
-Ensuring that your database queries are efficient and don’t fetch more data than needed.
-A way to mitigate this problem be Use Django's select_related and prefetch_related for related objects to reduce the number of database queries.
-Since we primarily dealt with 'Ad' objects without apparent foreign key relationships to other models. The primary optimization in your case revolves around filtering Ad objects based on specific criteria (like target_country and target_gender) and processing them for ad selection.
+#### One-Time SSL Token
 
-STEP3:
-I found out that I couldn't just send a POST request with a json to
-update the reward value.
-This would result in this error:
-Forbidden (CSRF cookie not set.): /reward-update/
-"POST /reward-update/ HTTP/1.1" 403 2870
+Each ad interaction is secured with a one-time SSL token generated in the AdSelection process.
+This token must be sent back with the reward accumulation request, ensuring that rewards can only be claimed through legitimate ad interactions.
+Once used, the token is marked as such in the database, preventing reuse.
 
-The Forbidden (CSRF cookie not set.) error is related to Django's built-in protection against Cross-Site Request Forgery (CSRF) attacks. When you make a POST request to a Django view, Django expects a CSRF token to be included in the request for security reasons. This is enforced by default in Django's settings.
+### For setting reward value:
 
-So that is already one protection. But I do understand that it might not be
-sufficient.
+#### Admin-only access
 
-I also added this method decorator:
+using
 
 ```python
-   @method_decorator(user_passes_test(lambda u: u.is_staff))
+@method_decorator(user_passes_test(lambda u: u.is_staff))
 ```
 
 To protect from users who do not posses admin priviledges.
 
-We could use REST API for further decoupling and security but I feared that
-it would add development time and wanted to make sure I have time to finish
-all the steps of the assignment.
+#### CSRF Protection
 
-Another way to prevent users from changing the reward is to set the reward field
-to private and have a method to set it that is only accecible to admins.
-
-The major way I protect against users abusing accumulation of rewards is
-by attaching to each reward a one time ssl token that can be used only once
-to accumulate a reward
+Django's built-in CSRF protection is enabled for this API.
+A CSRF token must be included in POST requests to prevent Cross-Site Request Forgery attacks.
+Admin-Only Access for Reward Updates
+The API uses the user_passes_test decorator to ensure that only admin users can update reward values.
+This is a crucial measure to prevent unauthorized manipulation of reward values.
 
 # AdSelectionView API
 
-## Endpoint
+## API Endpoint
 
 URL: /get-ads/
 Method: GET
+
+### Data Requirements:
+
+user_id: ID of the user we need to select ads for.
+gender: Gender of the user we need to select ads for.
+country: Country of the user we need to select ads for.
+
+## Response
+
+Success: A list of ads with their details and a unique token for each ad.
+Failure: A message indicating no ads are available.
 
 ## Description:
 
@@ -103,22 +112,38 @@ Selects ads based on user attributes and broadcasting policies.
 Handles the selection and delivery of ads.
 Generates a secure token for each ad for validating user interactions.
 
+## Error Handling
+
+Returns a 404 status code if no suitable ads are found for the user's criteria.
+Returns a 500 status code for internal server errors.
+
 ## Adding New Broadcasting Policies
 
 Define new policy in constants.py.
-Implement selection logic in a method like select_using_new_policy.
-Update select_ads to include the new policy.
+Implement selection logic in a method like select_using_new_policy in the
+AdSelectionView class.
+Update select_ads method in the AdSelectionView to include the new policy.
 
 # Reward Update API
 
-## Endpoint
+## Functionality:
+
+Allows admin users to update the reward value for an ad.
+
+## API Endpoint
 
 URL: /reward-update/
 Method: POST
 
-## Description:
+### Data Requirements:
 
-Allows admin users to update the reward value for an ad.
+ad_id: ID of the ad that was interacted with.
+reward: The reward amount we want to set for interacting with the ad.
+
+## Response
+
+Success: A confirmation message indicating the reward has been updated.
+Failure: A message indicating the reason for the failure (e.g., ad not found, invalid data).
 
 ## Security Measures
 
@@ -134,18 +159,26 @@ Admin-Only Access for Reward Updates
 The API uses the user_passes_test decorator to ensure that only admin users can update reward values.
 This is a crucial measure to prevent unauthorized manipulation of reward values.
 
+## Error Handling
+
+Returns a 400 status code for invalid requests (bad JSON, missing fields, invalid reward values).
+Returns a 404 status code if the specified ad is not found.
+Returns a 500 status code for unexpected server errors.
+
 # Reward Accumulation API
 
 ## Functionality
 
-The API is triggered when a user interacts with an ad (typically a click).
-It validates the interaction using a secure, one-time token and credits the user's account with the corresponding reward.
+Validates the interaction using a secure, one-time token and credits the user's
+account with the corresponding reward.
 
 ## API Endpoint
 
 URL: /accumulate-reward/
 Method: POST
-Data Requirements:
+
+### Data Requirements:
+
 user_id: ID of the user who interacted with the ad.
 ad_id: ID of the ad that was interacted with.
 reward: The reward amount for interacting with the ad.
@@ -169,9 +202,10 @@ Once used, the token is marked as such in the database, preventing reuse.
 REST API Implementation: For enhanced decoupling and security, a RESTful API structure can be considered. This would require additional development time but offers benefits in terms of standardization and scalability.
 Private Reward Field: To further tighten security, the reward field could be made private with a dedicated admin-accessible method for updates.
 
-### Handling Performance Issues
+## Handling Performance Issues
 
-Caching Strategies
+### Caching Strategies
+
 Caching is implemented to minimize database queries, especially for data that remains relatively stable.
 This reduces server response times and lightens database load, crucial for high-traffic scenarios.
 
@@ -183,3 +217,75 @@ Indexes in the PostgreSQL database are used to speed up data retrieval, especial
 
 Django’s select_related and prefetch_related are used for efficient handling of related objects.
 This is particularly beneficial when dealing with a large number of Ad objects and their associated data.
+
+## Error Handling
+
+Returns a 400 status code for invalid tokens or if required fields are missing.
+Returns a 404 status code if the user or ad is not found.
+Returns a 500 status code for unexpected server errors.
+
+# Reward Deduction API
+
+This API deducts a specified amount of reward from a user's account.
+
+## Functionality
+
+Deducts rewards from a user's balance.
+Ensures the reward balance does not go negative.
+
+## API Endpoint
+
+URL: /reward-deduction/
+Method: POST
+
+### Data Requirements:
+
+user_id: ID of the user who's reward balance we want to reduce.
+amount: The amount to be reduced from the account.
+
+# Reward History API
+
+## Functionality
+
+Fetches the user's reward transactions for the last week.
+
+## API Endpoint
+
+URL: /reward-history/
+Method: GET
+
+### Data Requirements:
+
+user_id: ID of the user we want to get the history of.
+
+## Response
+
+Success: A list of reward transactions for the last week.
+Failure: A message indicating that the user's reward history is unavailable.
+
+## Error Handling
+
+Returns a 400 status code if the user ID is missing from the request.
+Returns a 404 status code if the user is not found.
+Returns a 500 status code for unexpected server errors.
+
+# Reward Balance API
+
+## Functionality
+
+Displays the total reward balance of a user.
+
+## Endpoint
+
+URL: /reward-balance/
+Method: GET
+
+### Data Requirements:
+
+user_id: ID of the user who's balance we want to get.
+
+## Error Handling
+
+Returns a 400 status code if the user ID is missing from the request.
+Returns a 404 status code if the user is not found.
+Returns a 500 status code for unexpected server errors.
